@@ -19,12 +19,12 @@ def get_favicon(file):
 
 @web.route("/css/<filename>.css")
 def get_css(filename):
-    return web.send_static_file(filename + '.css')
+    return web.send_static_file('css/' + filename + '.css')
 
 
 @web.route("/js/<filename>.js")
 def get_js(filename):
-    return web.send_static_file(filename + '.js')
+    return web.send_static_file('js/' + filename + '.js')
 
 
 @web.route("/images/<file>")

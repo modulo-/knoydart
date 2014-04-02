@@ -1,6 +1,9 @@
 from flask.ext import restful
-
+from . import mysql
 
 class Readings(restful.Resource):
     def get(self):
-        return "all readings"
+
+        mysql.execute("SELECT * FROM readings")
+        data = mysql.fetchall()
+        return str(data)
