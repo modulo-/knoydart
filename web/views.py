@@ -5,6 +5,14 @@ from . import web
 def hello():
     return web.send_static_file('index.html')
 
+@web.route("/1")
+def index1():
+    return web.send_static_file('index_canvasjs.html')
+
+@web.route("/2")
+def index2():
+    return web.send_static_file('index_highchart.html')
+
 
 @web.route("/api/")
 def api_info():

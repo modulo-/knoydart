@@ -8,7 +8,7 @@ window.onload = function () {
                 title: "Timeline",
                 gridThickness: 1,
                 interval:1,
-                intervalType: "hour",
+                intervalType: "day",
         //        valueFormatString: "hh TT K",
                 labelAngle: -30
              },
