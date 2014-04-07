@@ -3,7 +3,7 @@ var chart = {};
 window.onload = function () {
     chart = new CanvasJS.Chart("chartContainer",
         {
-//            title : { text: "Fruits sold in First & Second Quarter" },
+            title : { text: "Knoydart and electricity" },
             axisX : {
                 title: "Timeline",
                 gridThickness: 1,

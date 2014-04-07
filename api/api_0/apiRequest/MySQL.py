@@ -5,7 +5,7 @@ from . import mysql
 
 class MySQL(restful.Resource):
     def get(self):
-
-        mysql.execute("SHOW TABLES")
-        data = mysql.fetchall()
+        cursor = mysql.cursor()
+        cursor.execute("SHOW TABLES")
+        data = cursor.fetchall()
         return str(data)

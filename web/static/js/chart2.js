@@ -1,5 +1,16 @@
 var chart;
 var dataseries = {};
+var apiURL = "/api/v0/";
+var commentBox;
+var comments = {};
+
+var lastIndex = -1;
+var maxDP = 100;
+var batchDP = 10;
+var updateInterval = 5000;
+var fetchInterval = updateInterval*batchDP;
+var data = [];
+var schema = {};
 
 $(document).ready(function() {
     chart = new Highcharts.Chart({
@@ -11,7 +22,7 @@ $(document).ready(function() {
             }
         },
         title: {
-            text: 'What happens in Knoydart...'
+            text: 'What is happening in Knoydart?'
         },
         xAxis: {
             type: 'datetime'
@@ -46,6 +57,19 @@ $(document).ready(function() {
             min: 0,
             max: 250
         }],
+        plotOptions: {
+            series: {
+                cursor: 'pointer',
+                point: {
+                    events: {
+                        click: function(){commentsHTML(this)}
+                    }
+                },
+                marker: {
+                    lineWidth: 1
+                }
+            }
+        },
         series: [{
             name: 'Dam Level',
             type: 'spline',
@@ -82,17 +106,13 @@ $(document).ready(function() {
     dataseries["pow_cons"] = chart.series[2];
 });
 
-var lastIndex = -1;
-var maxDP = 50;
-var batchDP = 10;
-var updateInterval = 1000;
-var fetchInterval = updateInterval*batchDP;
-var data = [];
-var schema = {};
-
 var parseFetch = function (result) {
     result = JSON.parse(result);
     data = data.concat(result["data"]);
+    if (data.length <= 0) {
+        return;
+    }
+
     var init = lastIndex == -1;
 
     if(init) {
@@ -115,19 +135,33 @@ var parseFetch = function (result) {
 
 var pushValues = function (force) {
     force = (force === true);
+    var shift = dataseries[Object.keys(dataseries)[0]].data.length > maxDP;
 
     var row = data.shift();
     if (row === undefined) {
         chart.redraw();
         return;
+    } else  {
+        comments[row[schema['id']]] = {
+            id: row[schema['id']],
+            datetime_start: 1000 * row[schema['datetime_start']],
+            datetime_end: 1000 * row[schema['datetime_end']],
+            comments: row[schema['comments']],
+            show: row[schema['comments']].length>0
+        };
+    }
+
+    if (shift) {
+        delete comments[Object.keys(comments)[0]];
     }
 
     var label;
     for (label in dataseries) {
-        var shift = dataseries[label].data.length > maxDP;
-        var point = {x: 1000*row[schema["datetime"]], y:row[schema[label]]};
+        var point = row2point(row, label);
         dataseries[label].addPoint(point, !force, shift, !force);
     }
+
+    printComments();
 
     if (force) {
         pushValues(force);
@@ -139,6 +173,114 @@ var pushValues = function (force) {
 
 var updateChart = function (init) {
     var cnt = (init ? maxDP : batchDP);
-    $.get("/api/v0/readings/chart/", {count:cnt, start:lastIndex}, parseFetch);
+    $.get(apiURL+"readings/chart/", {count:cnt, start:lastIndex}, parseFetch);
 };
 
+var row2point = function (row, label) {
+    var point = {
+        x: 1000 * row[schema['datetime_start']],
+        y: row[schema[label]],
+        id: row[schema['id']]
+    };
+
+    if (row[schema['comments']].length > 0) {
+        point.marker = {
+            enabled: true,
+            radius: 6
+        };
+    }
+
+    return point;
+};
+
+var commentsHTML = function(point) {
+    var commentData = comments[point['id']];
+    var from = new Date(commentData['datetime_start']).toDateString();
+    var to = new Date(commentData['datetime_end']).toDateString();
+
+    var title = "Comments for period " + from + " to " +  to;
+    var contents = "";
+
+    if (commentData.comments.length > 0) {
+        for (var i = 0; i < commentData.comments.length; i++) {
+            contents +=  '<div width="100%">' + commentData.comments[i] + '</div>';
+        }
+    } else {
+        contents = "No comments about this time available yet"
+    }
+
+    contents +=
+        '<div width="100%">' +
+            '<br/>' +
+            '<form method="post" id="commentForm" action="">' +
+            '   <label for="comment">Enter a new comment</label>' +
+            '   <br/>' +
+            '   <input name="comment"/>' +
+            '   <br/>' +
+            '   <label for="author">Your name</label>' +
+            '   <input name="author"/>' +
+            '   <input type="hidden" name="datapoint_id" value="' + point.id + '"/>' +
+            '   <button  onClick="return saveComment(this)">Submit</button>' +
+            '</form>' +
+        '</div>';
+
+    commentBox = $.fancybox({
+        title: title,
+        helpers:  {
+            title : {
+                type : 'float',
+                position: 'top'
+            }
+        },
+       content: contents
+    });
+};
+
+var saveComment = function(button){
+    var dataString = $('#commentForm').serialize();
+    console.log(dataString);
+    $.ajax({
+        url: apiURL + 'comments/',
+        type: 'PUT',
+        data: dataString
+//        success: function(result) {
+//            // Do something with the result
+//        }
+    });
+//    commentBox.close();
+    return false;
+};
+
+var filterComments = function(){
+    var filteredComments = {};
+
+    for (i in comments) {
+        if (comments[i].show) {
+            filteredComments[i]=comments[i];
+        }
+    }
+
+    return filteredComments;
+};
+
+var printComments = function(){
+    var contents = "";
+    var filteredComments = filterComments();
+
+    for (dataPoint in filteredComments){
+        var dp = filteredComments[dataPoint];
+        var from = new Date(dp['datetime_start']).toDateString();
+        var to = new Date(dp['datetime_end']).toDateString();
+
+        var title = "Comments for period " + from + " to " +  to;
+        var dpContents = '<div width="100%">' + title + '</div>';
+        for (line in dp["comments"]) {
+            dpContents += '<div width="100%">' + dp["comments"][line] + '</div>'
+        }
+        contents += '<div width="100%" style="border: solid">' + dpContents + '</div>';
+
+    }
+
+
+    document.getElementById("commentContainer").innerHTML = contents;
+};

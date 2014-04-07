@@ -34,7 +34,10 @@ def get_css(filename):
 def get_js(filename):
     return web.send_static_file('js/' + filename + '.js')
 
-
 @web.route("/images/<file>")
 def get_image(file):
     return web.send_static_file('images/' + file)
+
+@web.route("/fancybox/<file>")
+def get_fancybox(file):
+    return web.send_static_file('fancybox/' + file)

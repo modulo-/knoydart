@@ -3,7 +3,7 @@ from . import mysql
 
 class Readings(restful.Resource):
     def get(self):
-
-        mysql.execute("SELECT * FROM readings")
-        data = mysql.fetchall()
+        cursor = mysql.cursor()
+        cursor.execute("SELECT * FROM readings")
+        data = cursor.fetchall()
         return str(data)
