@@ -3,7 +3,8 @@ from . import web
 
 @web.route("/")
 def hello():
-    return web.send_static_file('index.html')
+    return index2()
+    # return web.send_static_file('index.html')
 
 @web.route("/1")
 def index1():

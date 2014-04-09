@@ -1,6 +1,8 @@
 try:
+    print "overrride"
     from config_override import Config
 except Exception:
+    print "original"
     class Config(object):
         DEBUG = True
         TESTING = True

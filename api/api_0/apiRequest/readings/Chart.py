@@ -14,7 +14,13 @@ class Chart(restful.Resource):
             if row[i] is None:
                 row[i] = []
             else:
-                row[i] = row[i].split(chr(0x1D))
+                row[i] = row[i].split(chr(0x1E))
+                comments = []
+                for j in row[i]:
+                    k = j.split(chr(0x1F))
+                    comment = {"author":k[1], "text":k[0], "fb_id":k[2]}
+                    comments.append(comment)
+                row[i] = comments
 
         return row
 
@@ -22,31 +28,33 @@ class Chart(restful.Resource):
         parser = reqparse.RequestParser()
         parser.add_argument('count', type=int, default=1, help='How many datapoints to return')
         parser.add_argument('start', type=int, default=-1, help='Since which index')
+        parser.add_argument('granularity', type=int, default=1, help='Data precision')
         args = parser.parse_args()
 
         count = min(args["count"], 100)
         start = args["start"]
+        precision = args["granularity"]
 
         cursor = mysql.cursor()
         cursor.execute(
             "SELECT "
-                "r.id AS id, "
+                "MIN(r.id) AS id, "
                 "MIN(UNIX_TIMESTAMP(ADDTIME(r.date, r.time))) AS datetime_start, "
                 "MAX(UNIX_TIMESTAMP(ADDTIME(r.date, r.time))) AS datetime_end, "
-                "r.pow_avg AS pow_prod, "
-                "r.elster*(3600/r.period_len) AS pow_cons, "
-                "r.dam_lvl AS dam_lvl, "
-                "GROUP_CONCAT(c.text ORDER BY c.created DESC SEPARATOR 0x1D) AS comments "
+                "AVG(r.pow_act+r.pow_react) AS pow_prod, "
+                "AVG(r.elster*(3600/r.period_len)) AS pow_cons, "
+                "AVG(r.dam_lvl) AS dam_lvl, "
+                "GROUP_CONCAT(CONCAT(c.text, 0x1F, c.author, 0x1F, IFNULL(c.facebook_id, '')) ORDER BY c.created DESC SEPARATOR 0x1E) AS comments "
             "FROM readings AS r "
             "LEFT JOIN comments AS c ON r.id = c.datapoint_id "
             "WHERE  "
                 "%s < 0 "
                 "OR "
                 "r.id > %s "
-            "GROUP BY r.id "
+            "GROUP BY ROUND(r.id/%s) "
             "ORDER BY r.date ASC, r.time ASC "
             "LIMIT %s",
-            (start, start, count))
+            (start, start, precision, count))
 
         schema = ["id", "datetime_start", "datetime_end", "pow_prod", "pow_cons", "dam_lvl", "comments"]
         schema = {value: index for index, value in enumerate(schema)}

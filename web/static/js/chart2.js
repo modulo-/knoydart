@@ -5,12 +5,14 @@ var commentBox;
 var comments = {};
 
 var lastIndex = -1;
-var maxDP = 100;
+var maxDP = 30;
 var batchDP = 10;
-var updateInterval = 5000;
+var updateInterval = 3000;
+var granularity = 1;
 var fetchInterval = updateInterval*batchDP;
 var data = [];
 var schema = {};
+
 
 $(document).ready(function() {
     chart = new Highcharts.Chart({
@@ -19,7 +21,8 @@ $(document).ready(function() {
             defaultSeriesType: 'spline',
             events: {
                 load: function(){updateChart(true)}
-            }
+            },
+            height: "400"
         },
         title: {
             text: 'What is happening in Knoydart?'
@@ -71,15 +74,15 @@ $(document).ready(function() {
             }
         },
         series: [{
-            name: 'Dam Level',
-            type: 'spline',
-//            color: '#0000AA',
-            marker: {
-                enabled: false
-            },
-            yAxis: 0,
-            data: []
-        }, {
+//            name: 'Dam Level',
+//            type: 'spline',
+////            color: '#0000AA',
+//            marker: {
+//                enabled: false
+//            },
+//            yAxis: 0,
+//            data: []
+//        }, {
             name: 'Power Production',
             type: 'areaspline',
             color: '#00AA00',
@@ -101,19 +104,20 @@ $(document).ready(function() {
         options: {updateSet: false}
     });
 
-    dataseries["dam_lvl"] = chart.series[0];
-    dataseries["pow_prod"] = chart.series[1];
-    dataseries["pow_cons"] = chart.series[2];
+//    dataseries["dam_lvl"] = chart.series[0];
+    dataseries["pow_prod"] = chart.series[0];
+    dataseries["pow_cons"] = chart.series[1];
+
+//    dataseries["dam_lvl"].hide();
+//    dataseries["pow_prod"].hide();
 });
 
-var parseFetch = function (result) {
+var parseFetch = function (result, init) {
     result = JSON.parse(result);
     data = data.concat(result["data"]);
     if (data.length <= 0) {
         return;
     }
-
-    var init = lastIndex == -1;
 
     if(init) {
         schema = result["schema"];
@@ -135,7 +139,8 @@ var parseFetch = function (result) {
 
 var pushValues = function (force) {
     force = (force === true);
-    var shift = dataseries[Object.keys(dataseries)[0]].data.length > maxDP;
+
+    var shift = dataseries[Object.keys(dataseries)[0]].data.length >= maxDP;
 
     var row = data.shift();
     if (row === undefined) {
@@ -173,7 +178,15 @@ var pushValues = function (force) {
 
 var updateChart = function (init) {
     var cnt = (init ? maxDP : batchDP);
-    $.get(apiURL+"readings/chart/", {count:cnt, start:lastIndex}, parseFetch);
+
+    if (init) {
+        data = [];
+        for (label in dataseries){
+            dataseries[label].setData([]);
+        }
+    }
+
+    $.get(apiURL+"readings/chart/", {count:cnt, start:lastIndex, granularity:granularity}, function(d){parseFetch(d, init)});
 };
 
 var row2point = function (row, label) {
@@ -203,7 +216,7 @@ var commentsHTML = function(point) {
 
     if (commentData.comments.length > 0) {
         for (var i = 0; i < commentData.comments.length; i++) {
-            contents +=  '<div width="100%">' + commentData.comments[i] + '</div>';
+            contents +=  '<div width="100%">' + commentData.comments[i]["text"] + '</div>';
         }
     } else {
         contents = "No comments about this time available yet"
@@ -213,13 +226,14 @@ var commentsHTML = function(point) {
         '<div width="100%">' +
             '<br/>' +
             '<form method="post" id="commentForm" action="">' +
+            '   <label for="author">Your name</label>' +
+            '   <input name="author" value="' + me.fb.name + '"/>' +
+            '   <br/>' +
             '   <label for="comment">Enter a new comment</label>' +
             '   <br/>' +
             '   <input name="comment"/>' +
-            '   <br/>' +
-            '   <label for="author">Your name</label>' +
-            '   <input name="author"/>' +
             '   <input type="hidden" name="datapoint_id" value="' + point.id + '"/>' +
+            '   <input type="hidden" name="facebook_id" value="' + me.fb.id + '"/>' +
             '   <button  onClick="return saveComment(this)">Submit</button>' +
             '</form>' +
         '</div>';
@@ -242,12 +256,12 @@ var saveComment = function(button){
     $.ajax({
         url: apiURL + 'comments/',
         type: 'PUT',
-        data: dataString
-//        success: function(result) {
-//            // Do something with the result
-//        }
+        data: dataString,
+        success: function(result) {
+            $.fancybox.close();
+        }
     });
-//    commentBox.close();
+
     return false;
 };
 
@@ -275,7 +289,11 @@ var printComments = function(){
         var title = "Comments for period " + from + " to " +  to;
         var dpContents = '<div width="100%">' + title + '</div>';
         for (line in dp["comments"]) {
-            dpContents += '<div width="100%">' + dp["comments"][line] + '</div>'
+            if (dp["comments"][line]["fb_id"] == ''){
+                dpContents += '<div width="100%"><b>' + dp["comments"][line]["text"] + '</b><br/>By:<i>' + dp["comments"][line]["author"] + '</i></div>'
+            } else {
+                dpContents += '<div width="100%"><b>' + dp["comments"][line]["text"] + '</b><br/>By:<img src="https://graph.facebook.com/'+dp["comments"][line]["fb_id"]+'/picture" /> <a href="https://facebook.com/'+dp["comments"][line]["fb_id"]+'">' + dp["comments"][line]["author"] + '</a></div>'
+            }
         }
         contents += '<div width="100%" style="border: solid">' + dpContents + '</div>';
 
@@ -283,4 +301,13 @@ var printComments = function(){
 
 
     document.getElementById("commentContainer").innerHTML = contents;
+};
+
+var redrawChart = function(gran){
+    lastIndex = 0;
+    data = [];
+    comments = [];
+    granularity = gran;
+
+    updateChart(true);
 };
