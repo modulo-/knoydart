@@ -1,95 +1,318 @@
-var chart = {};
+var chart;
+var gauge, gaugePoint;
+var dataseries = {};
+var apiURL = "/api/v0/";
+var commentBoxPoint;
+var comments = {};
 
-window.onload = function () {
-    chart = new CanvasJS.Chart("chartContainer",
-        {
-            title : { text: "Knoydart and electricity" },
-            axisX : {
-                title: "Timeline",
-                gridThickness: 1,
-                interval:1,
-                intervalType: "day",
-        //        valueFormatString: "hh TT K",
-                labelAngle: -30
-             },
-            axisY : {
-                title: "Power",
-                prefix: "",
-                suffix: " kW",
-                maximum: 200,
-                minimum: 0
-            },
-
-            axisY2 : {
-                title: "Dam Level",
-                prefix: "",
-                suffix: " mm",
-                maximum: 2500,
-                minimum: 500
-            }
-        }
-    );
-
-    chart.options.data = [];
-    chart.options.data.push(dataseries["pow_prod"]);
-    chart.options.data.push(dataseries["pow_cons"]);
-    chart.options.data.push(dataseries["dam_lvl"]);
-
-    chart.options.updateSet = false;
-
-    updateChart(true);
-};
-
-var series1 = { //dataSeries - first quarter
-    type: "splineArea",
-    axisYType: "primary",
-    xValueType: "dateTime",
-    name: "Power production",
-    showInLegend: true,
-	color: "rgba(54,158,173,.7)",
-	toolTipContent: "Production: {y} KW",
-    markerType: "square",
-    dataPoints: []
-};
-
-var series2 = { //dataSeries - second quarter
-    type: "splineArea",
-    axisYType: "primary",
-    xValueType: "dateTime",
-    name: "Power Consumption",
-    showInLegend: true,
-	color: "rgba(154,58,73,.7)",
-	toolTipContent: "Consumption: {y} KW",
-    markerType: "square",
-    dataPoints: []
-};
-
-var series3 = { //dataSeries - second quarter
-    type: "spline",
-    axisYType: "secondary",
-    xValueType: "dateTime",
-    name: "Dam Level",
-    showInLegend: true,
-	color: "rgba(100,208,73,.7)",
-	toolTipContent: "Water at {y} mm",
-    markerType: "circle",
-    dataPoints: []
-};
-
-var dataseries = {"pow_prod":series1, "pow_cons":series2, "dam_lvl":series3};
-
-var lastIndex = -1;
-var maxDP = 100;
+var lastIndex = 1000;
+var oldestIndex = 1000;
+var maxDP = 25;
 var batchDP = 10;
-var updateInterval = 1000;
+var updateInterval = 60000;
+var granularity = 1;
+var history_offset = 1008;
 var fetchInterval = updateInterval*batchDP;
 var data = [];
 var schema = {};
 
-var parseFetch = function (result) {
+
+$(document).ready(function() {
+    chart = new Highcharts.Chart({
+        chart: {
+            renderTo: 'chartContainer',
+            defaultSeriesType: 'spline',
+            events: {
+                load: function(){updateChart(true)}
+            },
+            height: "400"
+        },
+        title: {
+            text: 'What is happening in Knoydart?'
+        },
+        xAxis: {
+            type: 'datetime'
+//            tickPixelInterval: 150,
+//            maxZoom: 20 * 1000
+        },
+        yAxis: [{
+//            minPadding: 0.2,
+//            maxPadding: 0.2,
+            title: {
+                text: 'Power (KW)'
+            },
+            labels: {
+                formatter: function() {
+                    return this.value +' KW';
+                }
+            },
+            min: 0,
+            max: 250
+        }, {
+//            minPadding: 0.2,
+//            maxPadding: 0.2,
+            title: {
+                text: 'Dam Level (mm)'
+            },
+            labels: {
+                formatter: function() {
+                    return this.value +' mm';
+                }
+            },
+            opposite: true,
+            min: 0,
+            max: 2500
+        }, {
+//            minPadding: 0.2,
+//            maxPadding: 0.2,
+            title: {
+                text: 'Rain Level (mm)'
+            },
+            labels: {
+                formatter: function() {
+                    return this.value +' mm';
+                }
+            },
+            opposite: true,
+            min: 0,
+            max: 5
+        }, {
+//            minPadding: 0.2,
+//            maxPadding: 0.2,
+            title: {
+                text: 'Dam Flow (m3)'
+            },
+            labels: {
+                formatter: function() {
+                    return this.value +' m3';
+                }
+            },
+            opposite: true,
+            min: 0,
+            max: 50
+        }],
+        plotOptions: {
+            series: {
+                cursor: 'pointer',
+                marker: {
+                    lineWidth: 1
+                },
+                point: {
+                    events: {
+                        click: function(){commentsHTML(this)}
+                    }
+                }
+            }
+        },
+        series: [{
+            name: 'Historical Power Consumption',
+            type: 'spline',
+            color: '#00AA00',
+            marker: {
+                enabled: false
+            },
+            yAxis: 0,
+            data: []
+        }, {
+            name: 'Power Consumption',
+            type: 'areaspline',
+            color: '#AA0000',
+            marker: {
+                enabled: false
+            },
+            yAxis: 0,
+            data: []
+        }, {
+            name: 'Dam Level',
+            type: 'spline',
+//            color: '#0000AA',
+            marker: {
+                enabled: false
+            },
+            yAxis: 1,
+            data: []
+        }, {
+            name: 'Power - Active+Reactive',
+            type: 'spline',
+//            color: '#0000AA',
+            marker: {
+                enabled: false
+            },
+            yAxis: 0,
+            data: []
+        },  {
+            name: 'Power - Apparent',
+            type: 'spline',
+//            color: '#0000AA',
+            marker: {
+                enabled: false
+            },
+            yAxis: 0,
+            data: []
+        }, {
+            name: 'Power - Average',
+            type: 'spline',
+//            color: '#0000AA',
+            marker: {
+                enabled: false
+            },
+            yAxis: 0,
+            data: []
+        }, {
+            name: 'Power - Active',
+            type: 'spline',
+//            color: '#0000AA',
+            marker: {
+                enabled: false
+            },
+            yAxis: 0,
+            data: []
+        }, {
+            name: 'Rain',
+            type: 'spline',
+//            color: '#0000AA',
+            marker: {
+                enabled: false
+            },
+            yAxis: 2,
+            data: []
+        }, {
+            name: 'Flow',
+            type: 'spline',
+//            color: '#0000AA',
+            marker: {
+                enabled: false
+            },
+            yAxis: 3,
+            data: []
+        } ],
+        options: {updateSet: false}
+    });
+
+    dataseries["pow_cons_hist"] = chart.series[0];
+    dataseries["pow_cons"] = chart.series[1];
+    dataseries["dam_lvl"] = chart.series[2];
+    dataseries["pow_prod"] = chart.series[3];
+    dataseries["pow_prod_app"] = chart.series[4];
+    dataseries["pow_prod_avg"] = chart.series[5];
+    dataseries["pow_prod_act"] = chart.series[6];
+    dataseries["rain"] = chart.series[7];
+    dataseries["flow"] = chart.series[8];
+
+    dataseries["dam_lvl"].hide();
+    dataseries["pow_prod"].hide();
+    dataseries["pow_prod_app"].hide();
+    dataseries["pow_prod_avg"].hide();
+    dataseries["pow_prod_act"].hide();
+    dataseries["rain"].hide();
+    dataseries["flow"].hide();
+
+
+    gauge = new Highcharts.Chart({
+	    chart: {
+            renderTo: 'gaugeContainer',
+	        type: 'gauge',
+	        plotBackgroundColor: null,
+	        plotBackgroundImage: null,
+	        plotBorderWidth: 0,
+	        plotShadow: false,
+            height: "250"
+	    },
+
+	    title: {
+	        text: 'Power-meter'
+	    },
+
+	    pane: {
+	        startAngle: -150,
+	        endAngle: 150,
+	        background: [{
+	            backgroundColor: {
+	                linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
+	                stops: [
+	                    [0, '#FFF'],
+	                    [1, '#333']
+	                ]
+	            },
+	            borderWidth: 0,
+	            outerRadius: '109%'
+	        }, {
+	            backgroundColor: {
+	                linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
+	                stops: [
+	                    [0, '#333'],
+	                    [1, '#FFF']
+	                ]
+	            },
+	            borderWidth: 1,
+	            outerRadius: '107%'
+	        }, {
+	            // default background
+	        }, {
+	            backgroundColor: '#DDD',
+	            borderWidth: 0,
+	            outerRadius: '105%',
+	            innerRadius: '103%'
+	        }]
+	    },
+
+	    // the value axis
+	    yAxis: {
+	        min: 0,
+	        max: 280,
+
+	        minorTickInterval: 'auto',
+	        minorTickWidth: 1,
+	        minorTickLength: 10,
+	        minorTickPosition: 'inside',
+	        minorTickColor: '#666',
+
+	        tickPixelInterval: 30,
+	        tickWidth: 2,
+	        tickPosition: 'inside',
+	        tickLength: 10,
+	        tickColor: '#666',
+	        labels: {
+	            step: 2,
+	            rotation: 'auto'
+	        },
+	        title: {
+	            text: 'kW'
+	        },
+	        plotBands: [{
+	            from: 0,
+	            to: 120,
+	            color: '#55BF3B' // green
+	        }, {
+	            from: 150,
+	            to: 180,
+	            color: '#DDDF0D' // yellow
+	        }, {
+	            from: 180,
+	            to: 280,
+	            color: '#FF0000' // red
+	        }]
+	    },
+
+	    series: [{
+	        name: 'Power usage',
+	        data: [0],
+	        tooltip: {
+	            valueSuffix: ' kW'
+	        }
+	    }]
+
+	});
+
+    gaugePoint = gauge.series[0].points[0];
+});
+
+var parseFetch = function (result, init) {
     result = JSON.parse(result);
-    data = data.concat(result["data"]);
-    var init = lastIndex == -1;
+    data = data.concat(result["data"].reverse());
+    if (data.length <= 0) {
+        return;
+    }
 
     if(init) {
         schema = result["schema"];
@@ -110,30 +333,247 @@ var parseFetch = function (result) {
 };
 
 var pushValues = function (force) {
+    force = (force === true);
+
+    var shift = false;
+    for (var label in dataseries) {
+        shift = shift || dataseries[label].data.length >= maxDP;
+    }
+
     var row = data.shift();
     if (row === undefined) {
-        chart.render();
+        chart.redraw();
+        updateChart();
         return;
+    } else  {
+        comments[row[schema['id']]] = {
+            id: row[schema['id']],
+            datetime_start: 1000 * row[schema['datetime_start']],
+            datetime_end: 1000 * row[schema['datetime_end']],
+            comments: row[schema['comments']],
+            show: row[schema['comments']].length>0
+        };
+    }
+
+    if (shift) {
+        delete comments[Object.keys(comments)[0]];
     }
 
     for (var label in dataseries) {
-        if (dataseries[label]["dataPoints"].length >= maxDP) {
-            dataseries[label]["dataPoints"].shift();
-        }
-        dataseries[label]["dataPoints"].push({x: new Date(1000*row[schema["datetime"]]),y: row[schema[label]]});
+        var point = row2point(row, label);
+        dataseries[label].addPoint(point, !force, shift, !force);
     }
+
+    gaugePoint.update(row[schema['pow_cons']]);
+
+    printComments();
 
     if (force) {
         pushValues(force);
     } else {
-        chart.render();
+        chart.redraw();
     }
 
 };
 
 var updateChart = function (init) {
+    $("#compression_val").val(granularity);
+    $("#dps_val").val(maxDP);
+    $("#hist_offset_val").val(history_offset);
+    $("#lastIndex_val").val(oldestIndex);
+
     var cnt = (init ? maxDP : batchDP);
 
-    $.get("/api/v0/readings/chart/", {count:cnt, start:lastIndex}, parseFetch);
+    if (init) {
+        lastIndex = oldestIndex;
+        data = [];
+        for (label in dataseries){
+            dataseries[label].setData([]);
+        }
+    }
+
+    $.get(apiURL+"readings/chart/", {count:cnt, start:lastIndex, granularity:granularity, history_offset:history_offset}, function(d){parseFetch(d, init)});
 };
 
+var row2point = function (row, label) {
+    var point = {
+        x: 1000 * row[schema['datetime_start']],
+        y: row[schema[label]],
+        id: row[schema['id']]
+    };
+
+    if (row[schema['comments']].length > 0 && label == "pow_cons") {
+        point.marker = {
+            enabled: true,
+            radius: 6
+        };
+    }
+
+    return point;
+};
+
+var commentsHTML = function(point) {
+    var commentData = comments[point['id']];
+    var from = new Date(commentData['datetime_start']).toDateString();
+    var to = new Date(commentData['datetime_end']).toDateString();
+
+    var title = "Comments for period " + from + " to " +  to;
+    var contents = "";
+
+    if (commentData.comments.length > 0) {
+        for (var i = 0; i < commentData.comments.length; i++) {
+            contents +=  '<div width="100%">' + commentData.comments[i]["text"] + '<i> - '+ commentData.comments[i]["author"] +'</i></div>';
+        }
+    } else {
+        contents = "No comments about this time available yet"
+    }
+
+    contents +=
+        '<div width="100%">' +
+            '<br/>' +
+            '<form method="post" id="commentForm" action="">' +
+            '   <label for="author">Your name</label>' +
+            '   <input name="author" value="' + me.fb.name + '"/>' +
+            '   <br/>' +
+            '   <label for="comment">Enter a new comment</label>' +
+            '   <br/>' +
+            '   <input name="comment"/>' +
+            '   <input type="hidden" name="datapoint_id" value="' + point.id + '"/>' +
+            '   <input type="hidden" name="id" value="' + point.x + '"/>' +
+            '   <input type="hidden" name="facebook_id" value="' + me.fb.id + '"/>' +
+            '   <button  onClick="return saveComment(this)">Submit</button>' +
+            '</form>' +
+        '</div>';
+
+    commentBoxPoint = point;
+    $.fancybox({
+        title: title,
+        helpers:  {
+            title : {
+                type : 'float',
+                position: 'top'
+            }
+        },
+       content: contents
+    });
+};
+
+var saveComment = function(button){
+    var form = $('#commentForm');
+    var dataString = form.serialize();
+    var values = {};
+    $.each($('#commentForm').serializeArray(), function(i, field) {
+        values[field.name] = field.value;
+    });
+    var obj = {
+        author: values.author,
+        text: values.comment,
+        fb_id: values.facebook_id
+    };
+
+    $.ajax({
+        url: apiURL + 'comments/',
+        type: 'PUT',
+        data: dataString,
+        success: function(result) {
+            if (comments[values["datapoint_id"]] != undefined) {
+                comments[values["datapoint_id"]].comments.push(obj);
+            }
+            commentBoxPoint.update({marker:{
+            enabled: true,
+            radius: 6
+        }});
+            printComments();
+            $.fancybox.close();
+        }
+    });
+
+    return false;
+};
+
+var filterComments = function(){
+    var filteredComments = {};
+
+    for (i in comments) {
+        if (comments[i].comments.length > 0) {
+            filteredComments[i]=comments[i];
+        }
+    }
+
+    return filteredComments;
+};
+
+var printComments = function(){
+    var contents = "";
+    var filteredComments = filterComments();
+
+    for (dataPoint in filteredComments){
+        var dp = filteredComments[dataPoint];
+        var dpContents = '';
+        for (line in dp["comments"]) {
+            dpContents += comment2div(dp["comments"][line], dp['datetime_start'], dp['datetime_end']);
+        }
+        contents += dpContents;
+
+    }
+
+
+    document.getElementById("commentContainer").innerHTML = contents;
+};
+
+var redrawChart = function(options){
+    data = [];
+    comments = [];
+
+    if (options.compression != undefined){
+        granularity = options.compression;
+    }
+    if (options.points != undefined){
+        maxDP = options.points;
+    }
+    if (options.history_offset != undefined){
+        history_offset = options.history_offset;
+    }
+
+//    oldestIndex -= maxDP*granularity;
+    if (options.lastIndex != undefined){
+        oldestIndex = options.lastIndex;
+        lastIndex = options.lastIndex;
+    }
+
+    updateChart(true);
+};
+
+var comment2div = function(comment, dp_start, dp_end) {
+
+    var from_d = new Date(dp_start).toDateString();
+    var from_t = new Date(dp_start).toLocaleTimeString();
+    var to = new Date(dp_end).toDateString();
+
+    var html;
+    var nameSpan;
+    var nameDiv;
+    var imgUrl;
+    var imgDiv;
+    var authorDiv;
+
+    var textSpan = "<span style='width: 100%'>"+comment.text+"</span>";
+    var timeSpan = "<span style='width: 100%'>" + from_t + "<br/>" + from_d + "</span>";
+
+    if (comment["fb_id"] == ''){
+        imgUrl = 'images/default-avatar.jpg';
+        nameSpan = comment["author"];
+    } else {
+        imgUrl = '"https://graph.facebook.com/'+comment["fb_id"]+'/picture"';
+        nameSpan = '<a href="https://facebook.com/'+comment["fb_id"]+'">' + comment["author"] + '</a>';
+    }
+    nameSpan = "<span style='font-weight: bold'>" + nameSpan + "</span>";
+    nameDiv = "<div style='height:60px;display: block;float: left; margin-left: 5px'>"+nameSpan+'<br/>'+timeSpan+"</div>";
+    imgDiv = '<div style="height:60px;width:60px; float: left"><img src='+imgUrl+' style="height:60px;width:60px;" /> </div>';
+
+    authorDiv = "<div style='height:60px;float: left; background-color: #FAFBFC; margin: 0px 5px 5px 0px;'>"+imgDiv+nameDiv+"</div>";
+
+    html = '<div style="width:100%;display: block; float: left;border-top-style: solid;border-color: lightgray;background-color: #F6F7F8">' +authorDiv+textSpan + '</div>';
+
+    return html;
+};
