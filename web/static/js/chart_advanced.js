@@ -130,6 +130,36 @@ $(document).ready(function() {
                 opposite: true,
                 min: 0,
                 max: 2500
+            },
+            {
+//            minPadding: 0.2,
+//            maxPadding: 0.2,
+                title: {
+                    text: 'Rain Level (mm)'
+                },
+                labels: {
+                    formatter: function () {
+                        return this.value + ' mm';
+                    }
+                },
+                opposite: true,
+                min: 0,
+                max: 5
+            },
+            {
+//            minPadding: 0.2,
+//            maxPadding: 0.2,
+                title: {
+                    text: 'Dam Flow (m3)'
+                },
+                labels: {
+                    formatter: function () {
+                        return this.value + ' m3';
+                    }
+                },
+                opposite: true,
+                min: 0,
+                max: 50
             }
         ],
         plotOptions: {
@@ -140,16 +170,38 @@ $(document).ready(function() {
                 },
                 point: {
                     events: {
-//                        click: function(){commentsHTML(this)}
+                        click: function () {
+                            commentsHTML(this)
+                        }
                     }
                 }
             }
         },
         series: [
             {
+                name: 'Historical Power Consumption',
+                type: 'spline',
+                color: '#00AA00',
+                marker: {
+                    enabled: false
+                },
+                yAxis: 0,
+                data: []
+            },
+            {
+                name: 'Power Consumption',
+                type: 'areaspline',
+                color: '#AA0000',
+                marker: {
+                    enabled: false
+                },
+                yAxis: 0,
+                data: []
+            },
+            {
                 name: 'Dam Level',
                 type: 'spline',
-                color: '#0A599F',
+//            color: '#0000AA',
                 marker: {
                     enabled: false
                 },
@@ -157,124 +209,87 @@ $(document).ready(function() {
                 data: []
             },
             {
-                name: 'Power demand',
-                type: 'areaspline',
-                color: '#0C8E08',
+                name: 'Power - Active+Reactive',
+                type: 'spline',
+//            color: '#0000AA',
                 marker: {
                     enabled: false
                 },
                 yAxis: 0,
+                data: []
+            },
+            {
+                name: 'Power - Apparent',
+                type: 'spline',
+//            color: '#0000AA',
+                marker: {
+                    enabled: false
+                },
+                yAxis: 0,
+                data: []
+            },
+            {
+                name: 'Power - Average',
+                type: 'spline',
+//            color: '#0000AA',
+                marker: {
+                    enabled: false
+                },
+                yAxis: 0,
+                data: []
+            },
+            {
+                name: 'Power - Active',
+                type: 'spline',
+//            color: '#0000AA',
+                marker: {
+                    enabled: false
+                },
+                yAxis: 0,
+                data: []
+            },
+            {
+                name: 'Rain',
+                type: 'spline',
+//            color: '#0000AA',
+                marker: {
+                    enabled: false
+                },
+                yAxis: 2,
+                data: []
+            },
+            {
+                name: 'Flow',
+                type: 'spline',
+//            color: '#0000AA',
+                marker: {
+                    enabled: false
+                },
+                yAxis: 3,
                 data: []
             }
         ],
         options: {updateSet: false}
     });
 
-    dataseries["dam_lvl"] = chart.series[0];
-    dataseries["pow_prod_app"] = chart.series[1];
+    dataseries["pow_cons_hist"] = chart.series[0];
+    dataseries["pow_cons"] = chart.series[1];
+    dataseries["dam_lvl"] = chart.series[2];
+    dataseries["pow_prod"] = chart.series[3];
+    dataseries["pow_prod_app"] = chart.series[4];
+    dataseries["pow_prod_avg"] = chart.series[5];
+    dataseries["pow_prod_act"] = chart.series[6];
+    dataseries["rain"] = chart.series[7];
+    dataseries["flow"] = chart.series[8];
 
-//    dataseries["dam_lvl"].hide();
-//    dataseries["pow_prod_app"].hide();
-
-//
-//    gauge = new Highcharts.Chart({
-//	    chart: {
-//            renderTo: 'gaugeContainer',
-//	        type: 'gauge',
-//	        plotBackgroundColor: null,
-//	        plotBackgroundImage: null,
-//	        plotBorderWidth: 0,
-//	        plotShadow: false,
-//            height: "250"
-//	    },
-//
-//	    title: {
-//	        text: 'Power-meter'
-//	    },
-//
-//	    pane: {
-//	        startAngle: -150,
-//	        endAngle: 150,
-//	        background: [{
-//	            backgroundColor: {
-//	                linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
-//	                stops: [
-//	                    [0, '#FFF'],
-//	                    [1, '#333']
-//	                ]
-//	            },
-//	            borderWidth: 0,
-//	            outerRadius: '109%'
-//	        }, {
-//	            backgroundColor: {
-//	                linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
-//	                stops: [
-//	                    [0, '#333'],
-//	                    [1, '#FFF']
-//	                ]
-//	            },
-//	            borderWidth: 1,
-//	            outerRadius: '107%'
-//	        }, {
-//	            // default background
-//	        }, {
-//	            backgroundColor: '#DDD',
-//	            borderWidth: 0,
-//	            outerRadius: '105%',
-//	            innerRadius: '103%'
-//	        }]
-//	    },
-//
-//	    // the value axis
-//	    yAxis: {
-//	        min: 0,
-//	        max: 280,
-//
-//	        minorTickInterval: 'auto',
-//	        minorTickWidth: 1,
-//	        minorTickLength: 10,
-//	        minorTickPosition: 'inside',
-//	        minorTickColor: '#666',
-//
-//	        tickPixelInterval: 30,
-//	        tickWidth: 2,
-//	        tickPosition: 'inside',
-//	        tickLength: 10,
-//	        tickColor: '#666',
-//	        labels: {
-//	            step: 2,
-//	            rotation: 'auto'
-//	        },
-//	        title: {
-//	            text: 'kW'
-//	        },
-//	        plotBands: [{
-//	            from: 0,
-//	            to: 120,
-//	            color: '#55BF3B' // green
-//	        }, {
-//	            from: 150,
-//	            to: 180,
-//	            color: '#DDDF0D' // yellow
-//	        }, {
-//	            from: 180,
-//	            to: 280,
-//	            color: '#FF0000' // red
-//	        }]
-//	    },
-//
-//	    series: [{
-//	        name: 'Power usage',
-//	        data: [0],
-//	        tooltip: {
-//	            valueSuffix: ' kW'
-//	        }
-//	    }]
-//
-//	});
-//
-//    gaugePoint = gauge.series[0].points[0];
-    });
+    dataseries["dam_lvl"].hide();
+    dataseries["pow_prod"].hide();
+    dataseries["pow_prod_app"].hide();
+    dataseries["pow_prod_avg"].hide();
+    dataseries["pow_prod_act"].hide();
+    dataseries["rain"].hide();
+    dataseries["flow"].hide();
+});
 
     var parseFetch = function (result, init) {
         result = JSON.parse(result);

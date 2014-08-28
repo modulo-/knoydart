@@ -1,4 +1,6 @@
 import numbers
+import datetime
+import time
 from flask import json
 from flask.ext import restful
 from . import mysql
@@ -9,7 +11,6 @@ class Chart(restful.Resource):
     @staticmethod
     def fix_row(row, decimal_indices, list_indices):
         # raise Exception(row)
-
         for i in decimal_indices:
             if isinstance(row[i], numbers.Number):
                 row[i] = float(row[i])
@@ -43,34 +44,6 @@ class Chart(restful.Resource):
         precision = args["granularity"]
         history_offset = args["history_offset"]
 
-        cursor = mysql.cursor()
-        cursor.execute(
-            "SELECT "
-                "MIN(r.id) AS id, "
-                "MIN(UNIX_TIMESTAMP(ADDTIME(r.date, r.time))) AS datetime_start, "
-                "MAX(UNIX_TIMESTAMP(ADDTIME(r.date, r.time))) AS datetime_end, "
-                "AVG(r.pow_act+r.pow_react) AS pow_prod, "
-                "AVG(r.pow_app) AS pow_prod_app, "
-                "AVG(r.pow_avg) AS pow_prod_avg, "
-                "AVG(r.pow_act) AS pow_prod_act, "
-                "AVG(r.elster*(3600/r.period_len)) AS pow_cons, "
-                "AVG(h.elster*(3600/h.period_len)) AS pow_cons_hist, "
-                "AVG(r.dam_lvl) AS dam_lvl, "
-                "AVG(r.rain/4) AS rain, "
-                "AVG(r.dam_flow) AS flow, "
-                "GROUP_CONCAT(CONCAT(c.text, 0x1F, c.author, 0x1F, IFNULL(c.facebook_id, '')) ORDER BY c.created DESC SEPARATOR 0x1E) AS comments "
-            "FROM readings AS r "
-            "LEFT JOIN comments AS c ON r.id = c.datapoint_id "
-            "LEFT JOIN readings AS h ON r.id-%s = h.id "
-            "WHERE  "
-                "%s < 0 "
-                "OR "
-                "r.id > %s "
-            "GROUP BY ROUND(r.id/%s) "
-            "ORDER BY r.date DESC, r.time DESC "
-            "LIMIT %s",
-            (history_offset, start, start, precision, count))
-
         schema = [
             "id",
             "datetime_start",
@@ -80,7 +53,6 @@ class Chart(restful.Resource):
             "pow_prod_avg",
             "pow_prod_act",
             "pow_cons",
-            "pow_cons_hist",
             "dam_lvl",
             "rain",
             "flow",
@@ -89,12 +61,49 @@ class Chart(restful.Resource):
 
         schema = {value: index for index, value in enumerate(schema)}
 
+        cursor = mysql.cursor()
+
+        if start == -1:
+            end = int(time.mktime(datetime.datetime.utcnow().timetuple()))
+
+            start = end - (count * precision)
+        else:
+            end = start + (count * precision)
+
+        _start = int(args["start"]/precision)*precision
+        delta = start - _start
+
+        query =  ("SELECT "
+                "MIN(r.id) AS id, "
+                "UNIX_TIMESTAMP(MIN(r.datetime)) AS datetime_start, "
+                "UNIX_TIMESTAMP(MAX(r.datetime)) AS datetime_end, "
+                "AVG(r.pow_act+r.pow_react) AS pow_prod, "
+                "AVG(r.pow_app) AS pow_prod_app, "
+                "AVG(r.pow_avg) AS pow_prod_avg, "
+                "AVG(r.pow_act) AS pow_prod_act, "
+                "SUM(r.elster)*(3600/%s) AS pow_cons, "
+                "AVG(r.dam_lvl) AS dam_lvl, "
+                "SUM(r.rain/4) AS rain, "
+                "AVG(r.dam_flow) AS flow, "
+                "GROUP_CONCAT(CONCAT(c.text, 0x1F, c.author, 0x1F, IFNULL(c.facebook_id, '')) ORDER BY c.created DESC SEPARATOR 0x1E) AS comments "
+            "FROM readings AS r "
+            "LEFT JOIN comments AS c ON r.id = c.datapoint_id "
+            "WHERE  "
+                "(r.datetime >= %s AND r.datetime < %s)"
+            "GROUP BY FLOOR((UNIX_TIMESTAMP(r.datetime)-%s)/%s)  "
+            "ORDER BY r.id DESC "
+            "LIMIT %s")
+
+        cursor.execute(
+             query,
+            (precision, str(datetime.datetime.fromtimestamp(start)), str(datetime.datetime.fromtimestamp(end)), delta, precision, count))
+
         rows = [
             self.fix_row(
                 list(row),
                 [
                     schema["pow_cons"],
-                    schema["pow_cons_hist"],
+                    # schema["pow_cons_hist"],
                     schema["rain"],
                     schema["flow"]
                 ],
@@ -102,6 +111,35 @@ class Chart(restful.Resource):
             )
             for row in cursor.fetchall()]
 
+        start -= history_offset
+        end -= history_offset
+
+        cursor.execute(
+            query,
+            (precision, start, end, delta, precision, count))
+
+
+        rows_hist = [
+            self.fix_row(
+                list(row),
+                [
+                    schema["pow_cons"],
+                    schema["rain"],
+                    schema["flow"]
+                ],
+                [schema["comments"]]
+            )
+            for row in cursor.fetchall()]
+
+        for label in dict(schema):
+            schema[label + '_hist'] = len(schema)
+
+        i = 0
+        for histrow in rows_hist:
+            rows[i] += histrow
+            i+=1
+            if i == len(rows):
+                break
 
         data = {"schema": schema, "data": rows}
         return json.dumps(data)

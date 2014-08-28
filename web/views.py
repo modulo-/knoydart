@@ -26,9 +26,17 @@ def requires_auth(f):
 
 
 @web.route("/")
-@requires_auth
+@web.route("/chart-simple")
 def index():
-    return web.send_static_file('index.html')
+    return web.send_static_file('simple.html')
+
+@web.route("/chart-advanced")
+def index_adv():
+    return web.send_static_file('advanced.html')
+
+@web.route("/chart-tech")
+def index_tech():
+    return web.send_static_file('tech.html')
 
 
 @web.route("/api/")
@@ -54,6 +62,10 @@ def get_js(filename):
 @web.route("/images/<file>")
 def get_image(file):
     return web.send_static_file('images/' + file)
+
+@web.route("/fonts/<file>")
+def get_font(file):
+    return web.send_static_file('fonts/' + file)
 
 @web.route("/fancybox/<file>")
 def get_fancybox(file):

@@ -1,0 +1,144 @@
+<!DOCTYPE html
+        PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html
+        xmlns="http://www.w3.org/1999/xhtml"
+        xml:lang="en-US"
+        lang="en-US">
+<head>
+    <!-- ****** faviconit.com favicons ****** -->
+    <!-- Basic favicons -->
+    <link rel="shortcut icon" sizes="16x16 32x32 48x48 64x64" href="favicons/favicon.ico">
+    <link rel="shortcut icon" type="image/x-icon" href="favicons/favicon.ico">
+    <!--[if IE]>
+    <link rel="shortcut icon" href="favicons/favicon.ico"><![endif]-->
+    <!-- For Opera Speed Dial -->
+    <link rel="icon" type="image/png" sizes="195x195" href="favicons/favicon-195.png">
+    <!-- For iPad with high-resolution Retina Display running iOS ≥ 7 -->
+    <link rel="apple-touch-icon" sizes="152x152" href="favicons/favicon-152.png">
+    <!-- For iPad with high-resolution Retina Display running iOS ≤ 6 -->
+    <link rel="apple-touch-icon" sizes="144x144" href="favicons/favicon-144.png">
+    <!-- For iPhone with high-resolution Retina Display running iOS ≥ 7 -->
+    <link rel="apple-touch-icon" sizes="120x120" href="favicons/favicon-120.png">
+    <!-- For iPhone with high-resolution Retina Display running iOS ≤ 6 -->
+    <link rel="apple-touch-icon" sizes="114x114" href="favicons/favicon-114.png">
+    <!-- For Google TV devices -->
+    <link rel="icon" type="image/png" sizes="96x96" href="favicons/favicon-96.png">
+    <!-- For iPad Mini -->
+    <link rel="apple-touch-icon" sizes="76x76" href="favicons/favicon-76.png">
+    <!-- For first- and second-generation iPad -->
+    <link rel="apple-touch-icon" sizes="72x72" href="favicons/favicon-72.png">
+    <!-- For non-Retina iPhone, iPod Touch and Android 2.1+ devices -->
+    <link rel="apple-touch-icon" href="faviconsfavicons/favicon-57.png">
+    <!-- Windows 8 Tiles -->
+    <meta name="msapplication-TileColor" content="#FFFFFF">
+    <meta name="msapplication-TileImage" content="favicons/favicon-144.png">
+    <!-- ****** faviconit.com favicons ****** -->
+
+
+    <link href='fonts/OpenSans-Italic.ttf' rel='stylesheet' type='text/css'>
+    <link href='fonts/OpenSans-Semibold.ttf' rel='stylesheet' type='text/css'>
+
+
+    <title>The power of Knoydart</title>
+
+    <script type="application/javascript" src="js/jquery-2.1.0.min.js"></script>
+    <script type="application/javascript" src="js/highcharts.js"></script>
+    <script type="application/javascript" src="js/highcharts-more.js"></script>
+    <script type="application/javascript" src="js/compatability.js"></script>
+    <script>
+        (function (i, s, o, g, r, a, m) {
+            i['GoogleAnalyticsObject'] = r;
+            i[r] = i[r] || function () {
+                (i[r].q = i[r].q || []).push(arguments)
+            }, i[r].l = 1 * new Date();
+            a = s.createElement(o),
+                    m = s.getElementsByTagName(o)[0];
+            a.async = 1;
+            a.src = g;
+            m.parentNode.insertBefore(a, m)
+        })(window, document, 'script', '//www.google-analytics.com/analytics.js', 'ga');
+
+        ga('create', 'UA-49900046-1', 'modulo.ee');
+        ga('send', 'pageview');
+
+    </script>
+
+    <link rel="stylesheet" href="fancybox/jquery.fancybox.css" type="text/css" media="screen"/>
+    <script type="text/javascript" src="fancybox/jquery.fancybox.pack.js"></script>
+
+    <script type="application/javascript" src="js/chart_advanced.js"></script>
+</head>
+
+<body style="font-family: 'Open Sans', sans-serif; font-weight:600">
+<!--<div>-->
+<!--<img width='80%' height="100px" src="images/kf2.jpg" alt="Knoydart"/>-->
+<!--</div>-->
+
+<div id="chartContainer" style="width: 100%;">
+</div>
+
+<div style="height: 250px">
+    <div id="statsContainer" style="width: 100%;text-align: center">
+        <button onclick="redrawChart({compression:25, points:144, history_offset:60*60, lastIndex:-1})"
+                style="font-family: 'Open Sans', sans-serif; font-weight:400">Hourly
+        </button>
+        <button onclick="redrawChart({compression:600, points:144, history_offset:60*60*24, lastIndex:-1})"
+                style="font-family: 'Open Sans', sans-serif; font-weight:400">Daily
+        </button>
+        <button onclick="redrawChart({compression:4200, points:144, history_offset:60*60*24*7, lastIndex:-1})"
+                style="font-family: 'Open Sans', sans-serif; font-weight:400">Weekly
+        </button>
+        <button onclick="redrawChart({compression:126000, points:144, history_offset:60*60*24*31, lastIndex:-1})"
+                style="font-family: 'Open Sans', sans-serif; font-weight:400">Monthly
+        </button>
+        <button onclick="window.location='/chart-simple'"
+                style="font-family: 'Open Sans', sans-serif; font-weight:400">Simple View
+        </button>
+        <br/>
+        <!--
+          Below we include the Login Button social plugin. This button uses the JavaScript SDK to
+          present a graphical Login button that triggers the FB.login() function when clicked. -->
+
+        <!--<fb:login-button show-faces="true" width="200" max-rows="1"></fb:login-button>-->
+        <div style="display:none;">
+            <br/>
+            Compression:<br/>
+            <input id="compression_val" type="number" name="gran" min="1" value=600
+                   onchange="redrawChart({compression:this.value, lastIndex:-1})"/>
+            <br/>
+            Points on chart:<br/>
+            <input id="dps_val" type="number" name="dps" min="5" max="300" value=144
+                   onchange="redrawChart({points:this.value, lastIndex:-1})"/>
+            <br/>
+            History offset (sec):<br/>
+            <input id="hist_offset_val" type="number" name="dps" min="0" value=86400
+                   onchange="redrawChart({history_offset:this.value, lastIndex:-1})"/>
+        </div>
+    </div>
+
+    <div id="text" style="height: 100%; width: 100%;font-family: 'Open Sans',sans-serif;margin-top: 10px">
+        <div>
+            <span style='font-weight: 400; font-size:20px;'>This website shows a live data feed of electricity use in Knoydart, Inverness-shire. The Knoydart peninsula is not connected to the UK’s mainland road network or electricity grid. The peninsula is served by an independent green electricity supplier, Knoydart Renewables, that operates a hydro-electric system fed by Loch Bhraomisaig on the slopes of Beinn Buidhe. To read more, visit Knoydart Renewables’ <a
+                    href="http://www.knoydart-foundation.com/about/about-the-foundation/knoydart-renewables/">website</a>. For alternative ways of seeing data on energy use in Knoydart <a
+                    href="http://cyberscot.co.uk/Knoydart/boat.php">click here</a>.</span>
+        </div>
+        <div style="width: 100%; text-align: center;margin-top: 15px">
+            <span style='font-weight: 200; font-size:15px;'>This data visualisation was made possible with support from:</span>
+        </div>
+        <div style="width: 100%; text-align: center; margin-top: 10px">
+            <a href="http://www.knoydart-foundation.com/"><img src="images/knoydart.png" alt="Knoydart Foundation"
+                                                               height="50"/></a>
+            <a href="http://lifeoffthegrid.net/"><img src="images/Esrc_logo.png"
+                                                      alt="Economic & Social Research Council" height="50"/></a>
+            <a href="http://lifeoffthegrid.net/"><img src="images/edin_uni.png" alt="University of Edinburgh"
+                                                      height="50"/></a>
+            <a href="http://www.communityenergyscotland.org.uk/"><img src="images/comenerscot.png"
+                                                                      alt="Community Energy Scotland" height="50"/></a>
+            <a href="http://www.localenergyscotland.org/"><img src="images/logo.png" alt="Local Energy Scotland"
+                                                               height="50"/></a>
+        </div>
+    </div>
+</div>
+</body>
+</html>
