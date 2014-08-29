@@ -30,8 +30,32 @@ class Pages(restful.Resource):
 
         now = datetime.datetime.utcnow()
 
+        if page == "lastMonth":
+            end = now - datetime.timedelta(hours=now.hour, minutes=now.minute, seconds=now.second, days=now.day-1)
+            start = end - datetime.timedelta(days=1)
+            start -= datetime.timedelta(hours=start.hour, minutes=start.minute, seconds=start.second, days=start.day-1)
 
-        if page == "hourMoney":
+            timestamp_start = int(time.mktime(start.timetuple()))
+            timestamp_end = int(time.mktime(end.timetuple()))
+            period = timestamp_end-timestamp_start
+
+            data = json.loads(requests.get(url.format(timestamp_start, period, 60*10)).text)
+
+            headers = [x[0] for x in sorted(data['schema'].iteritems(), key=lambda (k,v): (v,k))]
+            rows = data['data']
+            matrix = [headers]+rows
+            return '\n'.join([','.join([str(v) for v in row[1:]]) for row in matrix])
+
+        elif page == "latest":
+            then = now - datetime.timedelta(minutes=1)
+            timestamp = int(time.mktime(then.timetuple()))
+
+            data = json.loads(requests.get(url.format(timestamp, 60, 60)).text)
+            x = data['data'][0][data['schema']['pow_prod_app']]
+
+            return x
+
+        elif page == "hourMoney":
             then = now - datetime.timedelta(hours=1)
             timestamp = int(time.mktime(then.timetuple()))
 

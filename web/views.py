@@ -1,6 +1,7 @@
 from . import web
 from functools import wraps
-from flask import request, Response
+from flask import request, Response, redirect
+
 
 def check_auth(username, password):
     """This function is called to check if a username /
@@ -70,4 +71,13 @@ def get_font(file):
 @web.route("/fancybox/<file>")
 def get_fancybox(file):
     return web.send_static_file('fancybox/' + file)
+
+@web.route("/footer.html")
+def get_footer():
+    return web.send_static_file('footer.html')
+
+@web.route("/report.csv")
+@requires_auth
+def get_report():
+    return redirect("http://knoydart.modulo.ee/api/v0/readings/pages/?page=lastMonth", code=302)
 

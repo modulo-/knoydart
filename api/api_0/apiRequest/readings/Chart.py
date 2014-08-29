@@ -89,14 +89,14 @@ class Chart(restful.Resource):
             "FROM readings AS r "
             "LEFT JOIN comments AS c ON r.id = c.datapoint_id "
             "WHERE  "
-                "(r.datetime >= %s AND r.datetime < %s)"
+                "(r.datetime >= FROM_UNIXTIME(%s) AND r.datetime < FROM_UNIXTIME(%s))"
             "GROUP BY FLOOR((UNIX_TIMESTAMP(r.datetime)-%s)/%s)  "
             "ORDER BY r.id DESC "
             "LIMIT %s")
 
         cursor.execute(
              query,
-            (precision, str(datetime.datetime.fromtimestamp(start)), str(datetime.datetime.fromtimestamp(end)), delta, precision, count))
+            (precision, start, end, delta, precision, count))
 
         rows = [
             self.fix_row(

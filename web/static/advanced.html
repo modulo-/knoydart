@@ -79,7 +79,7 @@
 </div>
 
 <div style="height: 250px">
-    <div id="statsContainer" style="width: 100%;text-align: center">
+    <div id="statsContainer" style="width: 100%;text-align: center; margin-top: 15px; margin-bottom: 15px">
         <button onclick="redrawChart({compression:25, points:144, history_offset:60*60, lastIndex:-1})"
                 style="font-family: 'Open Sans', sans-serif; font-weight:400">Hourly
         </button>
@@ -89,9 +89,9 @@
         <button onclick="redrawChart({compression:4200, points:144, history_offset:60*60*24*7, lastIndex:-1})"
                 style="font-family: 'Open Sans', sans-serif; font-weight:400">Weekly
         </button>
-        <button onclick="redrawChart({compression:126000, points:144, history_offset:60*60*24*31, lastIndex:-1})"
-                style="font-family: 'Open Sans', sans-serif; font-weight:400">Monthly
-        </button>
+        <!--<button onclick="redrawChart({compression:126000, points:144, history_offset:60*60*24*31, lastIndex:-1})"-->
+                <!--style="font-family: 'Open Sans', sans-serif; font-weight:400">Monthly-->
+        <!--</button>-->
         <button onclick="window.location='/chart-simple'"
                 style="font-family: 'Open Sans', sans-serif; font-weight:400">Simple View
         </button>
@@ -117,28 +117,10 @@
         </div>
     </div>
 
-    <div id="text" style="height: 100%; width: 100%;font-family: 'Open Sans',sans-serif;margin-top: 10px">
-        <div>
-            <span style='font-weight: 400; font-size:20px;'>This website shows a live data feed of electricity use in Knoydart, Inverness-shire. The Knoydart peninsula is not connected to the UK’s mainland road network or electricity grid. The peninsula is served by an independent green electricity supplier, Knoydart Renewables, that operates a hydro-electric system fed by Loch Bhraomisaig on the slopes of Beinn Buidhe. To read more, visit Knoydart Renewables’ <a
-                    href="http://www.knoydart-foundation.com/about/about-the-foundation/knoydart-renewables/">website</a>. For alternative ways of seeing data on energy use in Knoydart <a
-                    href="http://cyberscot.co.uk/Knoydart/boat.php">click here</a>.</span>
-        </div>
-        <div style="width: 100%; text-align: center;margin-top: 15px">
-            <span style='font-weight: 200; font-size:15px;'>This data visualisation was made possible with support from:</span>
-        </div>
-        <div style="width: 100%; text-align: center; margin-top: 10px">
-            <a href="http://www.knoydart-foundation.com/"><img src="images/knoydart.png" alt="Knoydart Foundation"
-                                                               height="50"/></a>
-            <a href="http://lifeoffthegrid.net/"><img src="images/Esrc_logo.png"
-                                                      alt="Economic & Social Research Council" height="50"/></a>
-            <a href="http://lifeoffthegrid.net/"><img src="images/edin_uni.png" alt="University of Edinburgh"
-                                                      height="50"/></a>
-            <a href="http://www.communityenergyscotland.org.uk/"><img src="images/comenerscot.png"
-                                                                      alt="Community Energy Scotland" height="50"/></a>
-            <a href="http://www.localenergyscotland.org/"><img src="images/logo.png" alt="Local Energy Scotland"
-                                                               height="50"/></a>
-        </div>
-    </div>
+    <div id="footer" style="height: 100%; width: 100%;font-family: 'Open Sans',sans-serif;margin-top: 10px"></div>
+    <script type="text/javascript">
+        $.get('footer.html', function(data){$('#footer').html(data)})
+    </script>
 </div>
 </body>
 </html>

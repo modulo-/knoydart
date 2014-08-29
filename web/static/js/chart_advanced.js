@@ -80,7 +80,7 @@ $(document).ready(function() {
             height: "400"
         },
         title: {
-            text: 'Knoydart Community Hydro Electric System:',
+            text: 'The Power of Knoydart',
             style: {
                 fontFamily: "'Open Sans', sans-serif",
                 fontWeight: 600,
@@ -88,14 +88,14 @@ $(document).ready(function() {
                 color: '#000'
             }
         },
-        subtitle: {
-            text: 'Live Data Feed',
-            style: {
-                fontWeight: 600,
-                fontSize: "20px",
-                color: '#000'
-            }
-        },
+//        subtitle: {
+//            text: 'Community Energy Live Data Feed',
+//            style: {
+//                fontWeight: 600,
+//                fontSize: "20px",
+//                color: '#000'
+//            }
+//        },
         xAxis: {
             type: 'datetime'
 //            tickPixelInterval: 150,
